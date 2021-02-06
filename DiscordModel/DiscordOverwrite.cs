@@ -13,13 +13,16 @@ namespace DiscordModel
         {
             Id = id;
             IsRole = isRole;
-            Permission.Add(DiscordPermission.SendMessages, null);
-            Permission.Add(DiscordPermission.SendTTS, null);
-            Permission.Add(DiscordPermission.ManageMessages, null);
-            Permission.Add(DiscordPermission.EmbedLinks, null);
-            Permission.Add(DiscordPermission.AttachFiles, null);
+            if (type is not DiscordChannelType.Unknown)
+            {
+                Permission.Add(DiscordPermission.ViewChannel, null);
+                Permission.Add(DiscordPermission.ManageChannel, null);
+                Permission.Add(DiscordPermission.ManagePermissions, null);
+                Permission.Add(DiscordPermission.ManageWebhooks, null);
+                Permission.Add(DiscordPermission.CreateInvite, null);
+            }
 
-            if (type is not DiscordChannelType.VoiceChannel)
+            if (type is DiscordChannelType.Category || type is DiscordChannelType.TextChannel)
             {
                 Permission.Add(DiscordPermission.SendMessages, null);
                 Permission.Add(DiscordPermission.SendTTS, null);
@@ -32,7 +35,7 @@ namespace DiscordModel
                 Permission.Add(DiscordPermission.AddReactions, null);
             }
 
-            if (type is not DiscordChannelType.TextChannel)
+            if (type is DiscordChannelType.Category || type is DiscordChannelType.VoiceChannel)
             {
                 Permission.Add(DiscordPermission.Connect, null);
                 Permission.Add(DiscordPermission.Speak, null);
