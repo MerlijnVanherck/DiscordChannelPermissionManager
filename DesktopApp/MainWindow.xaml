@@ -5,8 +5,168 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DesktopApp"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Discord Channel Permission Manager" MinWidth="1250" Width="1650" MinHeight="500" Height="500">
+    <DockPanel LastChildFill="True" Margin="20" VerticalAlignment="Stretch" Name="MainPanel">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+            <Label Margin="10" Height="25" Width="75">Bot token:</Label>
+            <TextBox Name="BotTokenBox" Width="500" Height="25" VerticalContentAlignment="Center"/>
+            <Button Name="ConnectButton" Margin="25 0" Padding="10 0" Width="100" Height="25" VerticalAlignment="Center" Click="ConnectButton_Click">Connect</Button>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0 0 0 10">
+            <Label Margin="10" Height="25" Width="75">Server:</Label>
+            <ComboBox Name="GuildsBox" Width="250" Margin="0 0 100 0" VerticalAlignment="Center" IsEnabled="False" ItemsSource="{Binding Guilds, NotifyOnSourceUpdated=True}" SelectionChanged="GuildsBox_SelectionChanged" />
+            <Label Margin="10" Height="25" Width="75">Overwrite:</Label>
+            <ComboBox Name="OverwriteNamesBox" Width="250" VerticalAlignment="Center" IsEnabled="False" ItemsSource="{Binding OverwriteNames, NotifyOnSourceUpdated=True}" SelectionChanged="OverwriteNamesBox_SelectionChanged" />
+        </StackPanel>
+        <Grid DockPanel.Dock="Top">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="50"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="17" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Row="0" Grid.Column="0" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="1 1 1 1" BorderBrush="Black">Overwrite</Label>
+            <Border Grid.Row="1" Grid.Column="0" BorderThickness="1 0 1 1" BorderBrush="Black">
+                <Grid Name="DiscardSavePanel" IsEnabled="False">
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="50"/>
+                        <ColumnDefinition Width="1*" />
+                        <ColumnDefinition Width="50"/>
+                        <ColumnDefinition Width="1*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="1" Height="25" Width="50" VerticalAlignment="Center" HorizontalAlignment="Center" Click="CommitButton_Click">Commit</Button>
+                    <Button Grid.Column="3" Height="25" Width="50" VerticalAlignment="Center" HorizontalAlignment="Center" Click="DiscardButton_Click">Discard</Button>
+                </Grid>
+            </Border>
 
-    </Grid>
+            <Label Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="5" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 1 1 1" BorderBrush="Black">General Permissions</Label>
+            <Label Grid.Row="1" Grid.Column="1" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">View Channel</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="2" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Manage Channel</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="3" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Manage Permissions</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="4" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Manage Webhooks</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="5" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 1 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Create Invite</TextBlock>
+            </Label>
+
+            <Label Grid.Row="0" Grid.Column="6" Grid.ColumnSpan="9" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 1 1 1" BorderBrush="Black">Text Permissions</Label>
+            <Label Grid.Row="1" Grid.Column="6" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Send Messages</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="7" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Send TTS</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="8" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Manage Messages</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="9" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Embed Links</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="10" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Attach Files</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="11" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Read Message History</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="12" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Mention @everyone</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="13" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Use External Emoji</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="14" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 1 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Add Reactions</TextBlock>
+            </Label>
+
+            <Label Grid.Row="0" Grid.Column="15" Grid.ColumnSpan="8" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 1 1 1" BorderBrush="Black">Voice Permissions</Label>
+            <Label Grid.Row="1" Grid.Column="15" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Connect</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="16" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Speak</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="17" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Video</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="18" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Mute Members</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="19" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Deafen Members</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="20" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Move Members</TextBlock>
+            </Label>
+            <Label Grid.Row="1" Grid.Column="21" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 0 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Use Voice Activity</TextBlock>
+            </Label>
+            <Label Name="LastFixedChild" Grid.Row="1" Grid.Column="22" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderThickness="0 0 1 1" BorderBrush="Black">
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap">Priority Speaker</TextBlock>
+            </Label>
+        </Grid>
+        <ScrollViewer>
+            <Grid Name="OverwriteGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+            </Grid>
+        </ScrollViewer>
+    </DockPanel>
 </Window>
