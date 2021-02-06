@@ -5,7 +5,7 @@ namespace DiscordModel
 {
     public class DiscordGuild : DiscordNamedObject
     {
-        public bool CanManagePermissions { get; }
+        public bool IsAdmin { get; }
         public List<DiscordRole> Roles { get; }
             = new List<DiscordRole>();
         public List<DiscordMember> Members { get; }
@@ -13,10 +13,10 @@ namespace DiscordModel
         public List<DiscordChannel> Channels { get; }
             = new List<DiscordChannel>();
 
-        public DiscordGuild(ulong id, string name, bool canManagePermissions)
+        public DiscordGuild(ulong id, string name, bool isAdmin)
             : base (id, name)
         {
-            CanManagePermissions = canManagePermissions;
+            IsAdmin = isAdmin;
         }
 
         public List<DiscordRole> GetOrderedRoles()
@@ -41,15 +41,15 @@ namespace DiscordModel
 
                 foreach (DiscordChannel c2 in Channels
                     .FindAll(c => c.ParentId == c1.Id)
-                    .OrderBy(c => c.Position)
-                    .ThenBy(c => c.Type))
+                    .OrderBy(c => c.Type)
+                    .ThenBy(c => c.Position))
                     channelList.Add(c2);
             }
 
             return channelList;
         }
 
-        public List<DiscordNamedObject> GetOrderedOverwrites()
+        public List<DiscordNamedObject> GetOrderedOverwriteNames()
         {
             var list = new List<DiscordNamedObject>();
 

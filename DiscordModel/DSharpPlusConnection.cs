@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,9 +10,13 @@ namespace DiscordModel
 {
     public static class DSharpPlusConnection
     {
-        private static DSharpPlus.DiscordClient Client { get; set; }
-        public static List<DiscordGuild> Guilds { get; set; }
-            = new List<DiscordGuild>();
+        private static DSharpPlus.DiscordClient Client;
+
+        public static List<DiscordGuild> Guilds { get; } = new List<DiscordGuild>();
+
+        private static TaskCompletionSource OperationTracker;
+
+        public static Task ConnectFinished => OperationTracker.Task;
 
         public static async Task Connect(string token)
         {
@@ -21,8 +26,12 @@ namespace DiscordModel
             Client = new DSharpPlus.DiscordClient(new DSharpPlus.DiscordConfiguration()
             {
                 Token = token,
-                Intents = DSharpPlus.DiscordIntents.AllUnprivileged
+                Intents = DSharpPlus.DiscordIntents.Guilds,
+                MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Warning
             });
+
+            OperationTracker = new TaskCompletionSource();
+            Guilds.Clear();
 
             try
             {
@@ -34,20 +43,111 @@ namespace DiscordModel
                 Client = null;
                 throw new ArgumentException("Invalid token provided.");
             }
+
+            await ConnectFinished;
+        }
+
+        public static async Task Disconnect()
+        {
+            await Client.DisconnectAsync();
+        }
+
+        public static async Task CommitChangedOverwrite(ulong guildId, Dictionary<ulong, DiscordOverwrite> overwriteList)
+        {
+            var dspGuild = await Client.GetGuildAsync(guildId);
+            
+            foreach (var (channelId, overwrite) in overwriteList)
+            {
+                var (allow, deny) = ConvertOverwriteToDSharpPlus(overwrite);
+
+                var dspChannel = await Client.GetChannelAsync(channelId);
+                var dspOverwrite = dspChannel.PermissionOverwrites.FirstOrDefault(o => o.Id == overwrite.Id);
+
+                var oldOverwriteExists = dspOverwrite is not null;
+                var newOverwriteExists = allow != Permissions.None || deny != Permissions.None;
+
+                if (oldOverwriteExists && newOverwriteExists)
+                    await UpdateExistingOverwrite(dspOverwrite, allow, deny);
+                else if (!oldOverwriteExists && newOverwriteExists)
+                    await AddNewOverwrite(dspGuild, dspChannel, allow, deny, overwrite);
+                else if (oldOverwriteExists && !newOverwriteExists)
+                    await DeleteExistingOverwrite(dspOverwrite);
+            }
+        }
+
+        private static async Task AddNewOverwrite(
+            DSharpPlus.Entities.DiscordGuild guild,
+            DSharpPlus.Entities.DiscordChannel channel,
+            DSharpPlus.Permissions allow,
+            DSharpPlus.Permissions deny,
+            DiscordOverwrite overwrite)
+        {
+            if (overwrite.IsRole)
+                await AddNewRoleOverwrite(guild, channel, allow, deny, overwrite);
+            else
+                await AddNewMemberOverwrite(guild, channel, allow, deny, overwrite);
+        }
+
+        private static async Task AddNewMemberOverwrite(
+            DSharpPlus.Entities.DiscordGuild guild,
+            DSharpPlus.Entities.DiscordChannel channel,
+            DSharpPlus.Permissions allow,
+            DSharpPlus.Permissions deny,
+            DiscordOverwrite overwrite)
+        {
+
+            var member = await guild.GetMemberAsync(overwrite.Id);
+            await channel.AddOverwriteAsync(member, allow, deny);
+        }
+
+        private static async Task AddNewRoleOverwrite(
+            DSharpPlus.Entities.DiscordGuild guild,
+            DSharpPlus.Entities.DiscordChannel channel,
+            DSharpPlus.Permissions allow,
+            DSharpPlus.Permissions deny,
+            DiscordOverwrite overwrite)
+        {
+            var role = guild.GetRole(overwrite.Id);
+            await channel.AddOverwriteAsync(role, allow, deny);
+        }
+
+        private static async Task UpdateExistingOverwrite(
+            DSharpPlus.Entities.DiscordOverwrite overwrite,
+            DSharpPlus.Permissions allow,
+            DSharpPlus.Permissions deny)
+        {
+            await overwrite.UpdateAsync(allow, deny);
+        }
+
+        private static async Task DeleteExistingOverwrite(
+            DSharpPlus.Entities.DiscordOverwrite overwrite)
+        {
+            await overwrite.DeleteAsync();
         }
 
         private static Task GuildDownloadCompleted(
             DSharpPlus.DiscordClient sender,
             DSharpPlus.EventArgs.GuildDownloadCompletedEventArgs e)
         {
-            return Task.Run(ConstructDiscordGuildCollection);
+            Task.Run(() => ConstructDiscordGuildCollection())
+                .ContinueWith((a) => OperationFinished(a));
+
+            return Task.CompletedTask;
+        }
+
+        private static void OperationFinished(Task t)
+        {
+            if (t.IsFaulted)
+                OperationTracker.SetException(t.Exception);
+
+            OperationTracker.SetResult();
         }
 
         private static async Task ConstructDiscordGuildCollection()
         {
             foreach (var g in Client.Guilds.Values)
             {
-                var guild = ConvertGuildFromDSharpPlus(g);
+                var guild = ConvertGuildFromDSharpPlus(g, g.CurrentMember);
                 Guilds.Add(guild);
 
                 foreach (var c in g.Channels.Values)
@@ -56,7 +156,8 @@ namespace DiscordModel
                         ConvertChannelFromDSharpPlus(c, g.CurrentMember));
 
                     foreach (var o in c.PermissionOverwrites)
-                        if (o.Type == DSharpPlus.OverwriteType.Member)
+                        if (o.Type == DSharpPlus.OverwriteType.Member
+                            && !guild.Members.Exists(m => m.Id == o.Id))
                             guild.Members.Add(await ConvertMemberFromDSharpPlus(o.Id));
                 }
 
@@ -68,17 +169,21 @@ namespace DiscordModel
         }
 
         private static DiscordGuild ConvertGuildFromDSharpPlus(
-            DSharpPlus.Entities.DiscordGuild guild)
+            DSharpPlus.Entities.DiscordGuild guild,
+            DSharpPlus.Entities.DiscordMember member)
         {
+            var perms = member.Roles
+                   .Select(r => r.Permissions)
+                   .Aggregate((p1, p2) => p1 | p2);
+
             return new DiscordGuild(
                 guild.Id,
                 guild.Name,
-                guild.Permissions.Value.HasPermission(
-                    DSharpPlus.Permissions.ManageChannels)
+                perms.HasPermission(DSharpPlus.Permissions.Administrator)
                 );
         }
 
-        public static DiscordRole ConvertRoleFromDSharpPlus(
+        private static DiscordRole ConvertRoleFromDSharpPlus(
             DSharpPlus.Entities.DiscordRole role,
             int botRolePosition)
         {
@@ -101,12 +206,13 @@ namespace DiscordModel
                 channel.Position,
                 channel.PermissionsFor(member).HasPermission(
                     DSharpPlus.Permissions.ManageRoles),
-                channelType
+                channelType,
+                channel.ParentId
                 );
 
             foreach (var o in channel.PermissionOverwrites)
                 discordChannel.Overwrites.Add(
-                    ConvertDiscordOverwriteFromDSharpPlus(o, channelType));
+                    ConvertOverwriteFromDSharpPlus(o, channelType));
 
             return discordChannel;
         }
@@ -114,9 +220,10 @@ namespace DiscordModel
         private static async Task<DiscordMember> ConvertMemberFromDSharpPlus(
            ulong id)
         {
+            var member = await Client.GetUserAsync(id);
             return new DiscordMember(
                 id,
-                (await Client.GetUserAsync(id)).Username
+                member.Username + "#" + member.Discriminator
                 );
         }
 
@@ -128,11 +235,12 @@ namespace DiscordModel
                 DSharpPlus.ChannelType.Category => DiscordChannelType.Category,
                 DSharpPlus.ChannelType.Text => DiscordChannelType.TextChannel,
                 DSharpPlus.ChannelType.Voice => DiscordChannelType.VoiceChannel,
+                DSharpPlus.ChannelType.News => DiscordChannelType.TextChannel,
                 _ => DiscordChannelType.Unknown,
             };
         }
 
-        private static DiscordOverwrite ConvertDiscordOverwriteFromDSharpPlus(
+        private static DiscordOverwrite ConvertOverwriteFromDSharpPlus(
             DSharpPlus.Entities.DiscordOverwrite overwrite,
             DiscordChannelType type)
         {
@@ -148,6 +256,22 @@ namespace DiscordModel
                     overwrite.CheckPermission(ConvertPermissionToDSharpPlus(p)));
 
             return discordOverwrite;
+        }
+
+        private static (DSharpPlus.Permissions, DSharpPlus.Permissions) ConvertOverwriteToDSharpPlus(
+           DiscordOverwrite overwrite)
+        {
+            var dspOverwrite = new DSharpPlus.Entities.DiscordOverwriteBuilder();
+
+            foreach (var (perm, b) in overwrite.Permission)
+            {
+                if (b == true)
+                    dspOverwrite.Allow(ConvertPermissionToDSharpPlus(perm));
+                else if (b == false)
+                    dspOverwrite.Deny(ConvertPermissionToDSharpPlus(perm));
+            }
+
+            return (dspOverwrite.Allowed, dspOverwrite.Denied);
         }
 
         private static bool? ConvertBoolFromDSharpPlusPermissionLevel(
