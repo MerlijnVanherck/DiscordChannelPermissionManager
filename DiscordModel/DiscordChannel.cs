@@ -31,8 +31,8 @@ namespace DiscordModel
             return Type switch
             {
                 DiscordChannelType.Category => "> " + Name,
-                DiscordChannelType.TextChannel => "# " + Name,
-                DiscordChannelType.VoiceChannel => "🔊 " + Name,
+                DiscordChannelType.TextChannel => "\u0023 " + Name,
+                DiscordChannelType.VoiceChannel => "\uD83D\uDD08" + Name,
                 _ => Name,
             };
         }
