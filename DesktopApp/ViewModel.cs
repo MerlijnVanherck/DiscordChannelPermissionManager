@@ -69,12 +69,11 @@ namespace DesktopApp
 
             var guild = Guilds.First(g => g.Id == guildId);
 
-            foreach (var c in guild.Channels)
+            foreach (var p in overwriteList)
             {
-                var index = c.Overwrites.FindIndex(o => o.Id == overwriteList[c.Id].Id);
-
-                if (index != -1)
-                    c.Overwrites[index] = overwriteList[c.Id];
+                var channel = guild.Channels.Find(c => c.Id == p.Key);
+                var overwrite = channel.Overwrites.FindIndex(o => o.Id == p.Value.Id);
+                channel.Overwrites[overwrite] = p.Value;
             }
         }
 

@@ -97,6 +97,7 @@ namespace DesktopApp
             GuildsBox.IsEnabled = false;
             GuildsBox.SelectedIndex = -1;
             OverwriteNamesBox.SelectedIndex = -1;
+            DiscardSavePanel.IsEnabled = false;
 
             ConnectButton.Click -= DisconnectButton_Click;
             ConnectButton.Click += ConnectButton_Click;
@@ -279,7 +280,7 @@ namespace DesktopApp
                     channel.Id,
                     channel.Overwrites.FirstOrDefault(o => o.Id == overwriteName.Id));
 
-            DiscardSavePanel.IsEnabled = AreOverwriteDictionariesEqual(
+            DiscardSavePanel.IsEnabled = !AreOverwriteDictionariesEqual(
                 overwrites,
                 ConstructOverwriteDictionaryFromGrid());
         }
@@ -292,7 +293,7 @@ namespace DesktopApp
                 return false;
 
             foreach (var p in dict1)
-                if (dict1?[p.Key] != p.Value)
+                if ((!p.Value?.Equals(dict2?[p.Key])) ?? dict2?[p.Key] is not null)
                     return false;
 
             return true;
@@ -301,7 +302,7 @@ namespace DesktopApp
         private async void OverwriteExistsButton_Click(object sender, RoutedEventArgs e)
         {
             var button = sender as ToggleButton;
-            var row = Grid.GetColumn((Border)button.Parent);
+            var row = Grid.GetRow((Border)button.Parent);
 
             var childrenList = OverwriteGrid.Children.OfType<UIElement>().ToList();
             var channel = (DiscordChannel)((Label)
@@ -314,9 +315,8 @@ namespace DesktopApp
             var guild = GuildsBox.SelectedItem as DiscordGuild;
             var isRole = guild.Roles.Any(r => r.Id == overwriteName.Id);
 
-
             ShowProgressBox();
-            if (button.IsChecked == true)
+            if (button.IsChecked == false)
                 await viewModel.RemoveOverwrite(guild.Id, channel, overwriteName);
             else
                 await viewModel.AddOverwrite(guild.Id, channel, overwriteName, isRole);
@@ -386,9 +386,15 @@ namespace DesktopApp
             ShowProgressBox();
             try
             {
+                var dict = ConstructOverwriteDictionaryFromGrid();
+
+                foreach (var p in dict)
+                    if (p.Value is null)
+                        dict.Remove(p.Key);
+
                 await viewModel.CommitChangedOverwrite(
                     guild.Id,
-                    ConstructOverwriteDictionaryFromGrid());
+                    dict);
             }
             catch (Exception exc)
             {

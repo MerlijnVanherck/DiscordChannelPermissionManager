@@ -61,10 +61,9 @@ namespace DiscordModel
                 var dspChannel = await Client.GetChannelAsync(channelId);
                 var dspOverwrite = dspChannel.PermissionOverwrites.FirstOrDefault(o => o.Id == overwrite.Id);
 
-                var oldOverwriteExists = dspOverwrite is not null;
-                var newOverwriteExists = allow != Permissions.None || deny != Permissions.None;
-
-                if (oldOverwriteExists && newOverwriteExists)
+                if (dspOverwrite is not null &&
+                    (dspOverwrite.Allowed != allow
+                    || dspOverwrite.Denied != deny))
                     await dspOverwrite.UpdateAsync(allow, deny);
             }
         }
