@@ -45,11 +45,11 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Background" Value="{StaticResource Button.Checked.True}"/>
-                                <Setter Property="Content" Value="✓"/>
+                                <Setter Property="Content" Value="&#x2713;"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="False">
                                 <Setter Property="Background" Value="{StaticResource Button.Checked.False}"/>
-                                <Setter Property="Content" Value="✕"/>
+                                <Setter Property="Content" Value="&#x2715;"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -82,11 +82,11 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="False">
                                 <Setter Property="Background" Value="{StaticResource Button.Checked.True}"/>
-                                <Setter Property="Content" Value="\u1F4C4"/>
+                                <Setter Property="Content" Value="&#x1F4C4;"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Background" Value="{StaticResource Button.Checked.False}"/>
-                                <Setter Property="Content" Value="\u1F5D1"/>
+                                <Setter Property="Content" Value="&#x1F5D1;"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
