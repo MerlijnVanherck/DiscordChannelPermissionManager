@@ -20,9 +20,6 @@ namespace DesktopApp
         public ObservableCollection<DiscordChannel> Channels { get; }
             = new ObservableCollection<DiscordChannel>();
 
-        public ObservableCollection<DiscordOverwrite> Overwrites { get; }
-            = new ObservableCollection<DiscordOverwrite>();
-
         public async Task Connect(string token)
         {
             Guilds.Clear();
@@ -37,7 +34,6 @@ namespace DesktopApp
             Guilds.Clear();
             OverwriteNames.Clear();
             Channels.Clear();
-            Overwrites.Clear();
             await DSharpPlusConnection.Disconnect();
         }
 
@@ -65,22 +61,11 @@ namespace DesktopApp
                 Channels.Add(c);
         }
 
-        public void UpdateOverwritesCollection(DiscordNamedObject overwriteName)
-        {
-            Overwrites.Clear();
-
-            foreach (var c in Channels)
-                Overwrites.Add(
-                    c.Overwrites.SingleOrDefault(o => o.Id == overwriteName.Id)
-                    ?? new DiscordOverwrite(overwriteName.Id, overwriteName is DiscordRole, c.Type));
-        }
-
         public async Task CommitChangedOverwrite(
             ulong guildId,
             Dictionary<ulong, DiscordOverwrite> overwriteList)
         {
-            await DSharpPlusConnection.CommitChangedOverwrite(guildId, overwriteList);
-            Console.WriteLine(guildId);
+            await DSharpPlusConnection.CommitChangedOverwrite(overwriteList);
 
             var guild = Guilds.First(g => g.Id == guildId);
 
@@ -88,11 +73,34 @@ namespace DesktopApp
             {
                 var index = c.Overwrites.FindIndex(o => o.Id == overwriteList[c.Id].Id);
 
-                if (index == -1)
-                    c.Overwrites.Add(overwriteList[c.Id]);
-                else
+                if (index != -1)
                     c.Overwrites[index] = overwriteList[c.Id];
             }
+        }
+
+        public async Task RemoveOverwrite(
+            ulong guildId,
+            DiscordChannel channel,
+            DiscordNamedObject overwriteName)
+        {
+            await DSharpPlusConnection.DeleteExistingOverwrite(channel.Id, overwriteName.Id);
+
+            Guilds.First(g => g.Id == guildId)
+                .Channels.First(c => c.Id == channel.Id)
+                .Overwrites.RemoveAll(o => o.Id == overwriteName.Id);
+        }
+
+        public async Task AddOverwrite(
+            ulong guildId,
+            DiscordChannel channel,
+            DiscordNamedObject overwriteName,
+            bool isRole)
+        {
+            await DSharpPlusConnection.AddNewOverwrite(guildId, channel.Id, overwriteName.Id, isRole);
+
+            Guilds.First(g => g.Id == guildId)
+                .Channels.First(c => c.Id == channel.Id)
+                .Overwrites.Add(new DiscordOverwrite(overwriteName.Id, isRole, channel.Type));
         }
     }
 }

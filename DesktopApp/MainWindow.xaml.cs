@@ -106,161 +106,277 @@ namespace DesktopApp
 
         private void GuildsBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            UpdateChannelsList();
-
-            if (GuildsBox.SelectedItem is DiscordGuild)
+            if (GuildsBox.SelectedItem is DiscordGuild guild)
+            {
+                viewModel.UpdateChannelsCollection(guild);
+                viewModel.UpdateOverwriteNamesCollection(guild);
                 OverwriteNamesBox.IsEnabled = true;
+            }
             else
                 OverwriteNamesBox.IsEnabled = false;
+
+            UpdateOverwriteGrid();
         }
 
         private void OverwriteNamesBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (OverwriteNamesBox.SelectedItem is DiscordNamedObject)
-                DiscardSavePanel.IsEnabled = true;
-            else
-                DiscardSavePanel.IsEnabled = false;
-
-            UpdateOverwritesList();
+            UpdateOverwriteGrid();
         }
 
-        private void UpdateChannelsList()
+        private void UpdateOverwriteGrid()
         {
+            OverwriteGrid.Children.Clear();
+            OverwriteGrid.RowDefinitions.Clear();
+
             var guild = GuildsBox.SelectedItem as DiscordGuild;
+            var overwriteName = OverwriteNamesBox.SelectedItem as DiscordNamedObject;
 
-            if (guild is null)
-            {
-                OverwriteGrid.Children.Clear();
-                OverwriteGrid.RowDefinitions.Clear();
+            if (guild is null || overwriteName is null)
                 return;
-            }
 
-            viewModel.UpdateChannelsCollection(guild);
-            viewModel.UpdateOverwriteNamesCollection(guild);
+            foreach (var channel in viewModel.Channels)
+                CreateOverwriteGridRow(
+                    guild,
+                    overwriteName,
+                    channel,
+                    viewModel.Channels.IndexOf(channel));
 
-            var index = OverwriteGrid.Children.IndexOf(LastFixedChild);
-            OverwriteGrid.Children.RemoveRange(
-                index + 1,
-                OverwriteGrid.Children.Count - index - 1);
+            DiscardSavePanel.IsEnabled = false;
+        }
 
-            for (int i = 0; i < viewModel.Channels.Count; i++)
-            {
-                OverwriteGrid.RowDefinitions.Add(
+        private void CreateOverwriteGridRow(
+            DiscordGuild guild,
+            DiscordNamedObject overwriteName,
+            DiscordChannel channel,
+            int row)
+        {
+            OverwriteGrid.RowDefinitions.Add(
                     new RowDefinition { Height = new GridLength(30) });
 
-                var label = new Label()
+            CreateOverwriteGridChannelLabel(channel, row);
+
+            CreateOverwriteGridExistsToggle(channel, overwriteName, row);
+
+            var permissions = Enum.GetValues(typeof(DiscordPermission));
+
+            for (int i = 0; i < permissions.Length; i++)
+                CreateOverwriteGridPermissionToggle(
+                    overwriteName,
+                    channel,
+                    (DiscordPermission)permissions.GetValue(i),
+                    row,
+                    i + 2,
+                    guild.IsAdmin);
+        }
+
+        private void CreateOverwriteGridChannelLabel(DiscordChannel channel, int rowIndex)
+        {
+            var label = new Label
+            {
+                Content = channel,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                BorderThickness = new Thickness(1, 0, 1, 1),
+                BorderBrush = new SolidColorBrush(Colors.Black)
+            };
+
+            if (channel.Type != DiscordChannelType.Category)
+                label.Padding = new Thickness(15, 0, 0, 0);
+
+            Grid.SetColumn(label, 0);
+            Grid.SetRow(label, rowIndex);
+
+            OverwriteGrid.Children.Add(label);
+        }
+
+        private void CreateOverwriteGridExistsToggle(
+            DiscordChannel channel,
+            DiscordNamedObject overwriteName,
+            int rowIndex)
+        {
+            var border = new Border
+            {
+                BorderThickness = new Thickness(0, 0, 1, 1),
+                BorderBrush = new SolidColorBrush(Colors.Black)
+            };
+
+            var button = new ToggleButton()
+            {
+                Height = 20,
+                Width = 20,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Style = (Style)this.FindResource("AddRemoveToggleButton")
+            };
+
+            button.IsChecked = channel.Overwrites.Exists(o => o.Id == overwriteName.Id);
+            button.Click += this.OverwriteExistsButton_Click;
+
+            border.Child = button;
+
+            Grid.SetColumn(border, 1);
+            Grid.SetRow(border, rowIndex);
+
+            OverwriteGrid.Children.Add(border);
+        }
+
+        private void CreateOverwriteGridPermissionToggle(
+            DiscordNamedObject overwriteName,
+            DiscordChannel channel,
+            DiscordPermission permission,
+            int row,
+            int col,
+            bool canManage = false)
+        {
+            var rightBorderThickness =
+                permission == DiscordPermission.CreateInvite
+                || permission == DiscordPermission.AddReactions
+                || permission == DiscordPermission.PrioritySpeaker
+                ? 1 : 0;
+
+            var border = new Border
+            {
+                BorderThickness = new Thickness(0, 0, rightBorderThickness, 1),
+                BorderBrush = new SolidColorBrush(Colors.Black)
+            };
+
+            border.IsEnabled = canManage;
+            if (!border.IsEnabled)
+                border.Background = new SolidColorBrush(Colors.LightGray);
+
+            var channelOverwrite = channel.Overwrites.FirstOrDefault(o => o.Id == overwriteName.Id);
+
+            if (channelOverwrite is not null &&
+                channelOverwrite.Permission.TryGetValue(permission, out bool? permissionValue))
+            {
+                var btn = new ToggleButton
                 {
-                    Content = viewModel.Channels[i],
-                    HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                    VerticalContentAlignment = VerticalAlignment.Center,
-                    BorderThickness = new Thickness(1, 0, 1, 1),
-                    BorderBrush = new SolidColorBrush(Colors.Black)
+                    IsChecked = permissionValue,
+                    Height = 25,
+                    Width = 25,
+                    Style = (Style)this.FindResource("PermissionToggleButton"),
+                    IsThreeState = true
                 };
 
-                if (viewModel.Channels[i].Type != DiscordChannelType.Category)
-                    label.Padding = new Thickness(15, 0, 0, 0);
+                btn.Click += this.PermissionToggleButton_Click;
 
-                Grid.SetColumn(label, 0);
-                Grid.SetRow(label, i);
-
-                OverwriteGrid.Children.Add(label);
+                border.Child = btn;
             }
+
+            Grid.SetColumn(border, col);
+            Grid.SetRow(border, row);
+
+            OverwriteGrid.Children.Add(border);
         }
 
-        private void UpdateOverwritesList()
+        private void PermissionToggleButton_Click(object sender, RoutedEventArgs e)
         {
-            foreach (var c in OverwriteGrid.Children.OfType<Border>().ToList())
-                OverwriteGrid.Children.Remove(c);
+            var overwriteName = OverwriteNamesBox.SelectedItem as DiscordNamedObject;
 
-            var guild = GuildsBox.SelectedItem as DiscordGuild;
-            var overwrite = OverwriteNamesBox.SelectedItem as DiscordNamedObject;
+            var overwrites = new Dictionary<ulong, DiscordOverwrite>();
+            foreach (var channel in viewModel.Channels)
+                overwrites.Add(
+                    channel.Id,
+                    channel.Overwrites.FirstOrDefault(o => o.Id == overwriteName.Id));
 
-            if (guild is null || overwrite is null)
-                return;
-
-            viewModel.UpdateOverwritesCollection(overwrite);
-
-            ConstructOverwritesList(guild.IsAdmin);
+            DiscardSavePanel.IsEnabled = AreOverwriteDictionariesEqual(
+                overwrites,
+                ConstructOverwriteDictionaryFromGrid());
         }
 
-        private void ConstructOverwritesList(bool canManage = true)
+        private bool AreOverwriteDictionariesEqual(
+            Dictionary<ulong, DiscordOverwrite> dict1,
+            Dictionary<ulong, DiscordOverwrite> dict2)
         {
-            DiscardSavePanel.IsEnabled = canManage;
+            if (dict1.Count != dict2.Count)
+                return false;
 
-            for (int i = 0; i < viewModel.Channels.Count; i++)
-            {
-                int j = 0;
-                foreach (DiscordPermission b in Enum.GetValues(typeof(DiscordPermission)))
-                {
-                    j++;
+            foreach (var p in dict1)
+                if (dict1?[p.Key] != p.Value)
+                    return false;
 
-                    var right = b == DiscordPermission.CreateInvite
-                        || b == DiscordPermission.AddReactions
-                        || b == DiscordPermission.PrioritySpeaker
-                        ? 1 : 0;
-
-                    var border = new Border
-                    {
-                        BorderThickness = new Thickness(0, 0, right, 1),
-                        BorderBrush = new SolidColorBrush(Colors.Black)
-                    };
-
-                    border.IsEnabled = canManage;
-                    if (!border.IsEnabled)
-                        border.Background = new SolidColorBrush(Colors.LightGray);
-
-                    if (viewModel.Overwrites[i].Permission.TryGetValue(b, out bool? perm))
-                    {
-                        var btn = new ToggleButton
-                        {
-                            IsChecked = perm,
-                            Height = 25,
-                            Width = 25,
-                            Style = (Style)this.FindResource("PermissionToggleButton"),
-                            IsThreeState = true
-                        };
-
-                        border.Child = btn;
-                    }
-
-                    Grid.SetColumn(border, j);
-                    Grid.SetRow(border, i);
-
-                    OverwriteGrid.Children.Add(border);
-                }
-            }
+            return true;
         }
 
-        private Dictionary<ulong, DiscordOverwrite> ConstructOverwriteDictionaryFromGrid()
+        private async void OverwriteExistsButton_Click(object sender, RoutedEventArgs e)
         {
+            var button = sender as ToggleButton;
+            var row = Grid.GetColumn((Border)button.Parent);
+
+            var childrenList = OverwriteGrid.Children.OfType<UIElement>().ToList();
+            var channel = (DiscordChannel)((Label)
+                childrenList.Find(e =>
+                Grid.GetColumn(e) == 0 &&
+                Grid.GetRow(e) == row))
+                .Content;
+
             var overwriteName = OverwriteNamesBox.SelectedItem as DiscordNamedObject;
             var guild = GuildsBox.SelectedItem as DiscordGuild;
             var isRole = guild.Roles.Any(r => r.Id == overwriteName.Id);
 
+
+            ShowProgressBox();
+            if (button.IsChecked == true)
+                await viewModel.RemoveOverwrite(guild.Id, channel, overwriteName);
+            else
+                await viewModel.AddOverwrite(guild.Id, channel, overwriteName, isRole);
+            CloseProgressBox();
+
+            UpdateOverwriteGrid();
+        }
+
+        private Dictionary<ulong, DiscordOverwrite> ConstructOverwriteDictionaryFromGrid()
+        {
+            var guild = GuildsBox.SelectedItem as DiscordGuild;
+            var overwriteName = OverwriteNamesBox.SelectedItem as DiscordNamedObject;
+            var isRole = guild.Roles.Any(r => r.Id == overwriteName.Id);
+
             var dictionary = new Dictionary<ulong, DiscordOverwrite>();
-            var borderList = OverwriteGrid.Children.OfType<Border>().ToList();
+            var childrenList = OverwriteGrid.Children.OfType<UIElement>().ToList();
 
-            for (int i = 0; i < viewModel.Overwrites.Count; i++)
+            for (int i = 0; i < OverwriteGrid.RowDefinitions.Count; i++)
             {
-                var overwrite = new DiscordOverwrite(
-                    overwriteName.Id,
-                    isRole,
-                    viewModel.Channels[i].Type);
+                var rowElements = childrenList.FindAll(e => Grid.GetRow(e) == i);
+                var channel = (DiscordChannel)((Label)rowElements.Find(e => Grid.GetColumn(e) == 0)).Content;
+                var existsToggle = (ToggleButton)((Border)rowElements.Find(e => Grid.GetColumn(e) == 1)).Child;
 
-                var j = 0;
-                foreach (DiscordPermission b in Enum.GetValues(typeof(DiscordPermission)))
-                {
-                    if (overwrite.Permission.ContainsKey(b))
-                        overwrite.Permission[b] = ((ToggleButton)borderList[j + Enum.GetValues(typeof(DiscordPermission)).Length * i].Child).IsChecked;
-                    j++;
-                }
+                var overwrite = existsToggle.IsChecked == true
+                    ? ConstructDiscordOverwriteFromList(rowElements, channel, overwriteName, isRole)
+                    : null;
 
                 dictionary.Add(
-                    viewModel.Channels[i].Id,
+                    channel.Id,
                     overwrite);
             }
 
             return dictionary;
+        }
+
+        private DiscordOverwrite ConstructDiscordOverwriteFromList(
+            List<UIElement> list,
+            DiscordChannel channel,
+            DiscordNamedObject overwriteName,
+            bool isRole
+            )
+        {
+            var overwrite = new DiscordOverwrite(
+                    overwriteName.Id,
+                    isRole,
+                    channel.Type);
+
+            var index = 2;
+            foreach (DiscordPermission perm in Enum.GetValues(typeof(DiscordPermission)))
+            {
+                if (overwrite.Permission.ContainsKey(perm))
+                {
+                    var border = (Border)list.Find(e => Grid.GetColumn(e) == index);
+                    overwrite.Permission[perm] = ((ToggleButton)border?.Child).IsChecked;
+                }
+
+                index++;
+            }
+
+            return overwrite;
         }
 
         private async void CommitButton_Click(object sender, RoutedEventArgs e)
@@ -279,14 +395,14 @@ namespace DesktopApp
                 DisplayError("Could not commit overwrites", exc.ToString());
             }
 
-            UpdateOverwritesList();
+            UpdateOverwriteGrid();
 
             CloseProgressBox();
         }
 
         private void DiscardButton_Click(object sender, RoutedEventArgs e)
         {
-            UpdateOverwritesList();
+            UpdateOverwriteGrid();
         }
     }
 }

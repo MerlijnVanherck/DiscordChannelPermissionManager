@@ -52,10 +52,8 @@ namespace DiscordModel
             await Client.DisconnectAsync();
         }
 
-        public static async Task CommitChangedOverwrite(ulong guildId, Dictionary<ulong, DiscordOverwrite> overwriteList)
+        public static async Task CommitChangedOverwrite(Dictionary<ulong, DiscordOverwrite> overwriteList)
         {
-            var dspGuild = await Client.GetGuildAsync(guildId);
-            
             foreach (var (channelId, overwrite) in overwriteList)
             {
                 var (allow, deny) = ConvertOverwriteToDSharpPlus(overwrite);
@@ -67,62 +65,50 @@ namespace DiscordModel
                 var newOverwriteExists = allow != Permissions.None || deny != Permissions.None;
 
                 if (oldOverwriteExists && newOverwriteExists)
-                    await UpdateExistingOverwrite(dspOverwrite, allow, deny);
-                else if (!oldOverwriteExists && newOverwriteExists)
-                    await AddNewOverwrite(dspGuild, dspChannel, allow, deny, overwrite);
-                else if (oldOverwriteExists && !newOverwriteExists)
-                    await DeleteExistingOverwrite(dspOverwrite);
+                    await dspOverwrite.UpdateAsync(allow, deny);
             }
         }
 
-        private static async Task AddNewOverwrite(
-            DSharpPlus.Entities.DiscordGuild guild,
-            DSharpPlus.Entities.DiscordChannel channel,
-            DSharpPlus.Permissions allow,
-            DSharpPlus.Permissions deny,
-            DiscordOverwrite overwrite)
+        public static async Task AddNewOverwrite(
+            ulong guildId,
+            ulong channelId,
+            ulong overwriteId,
+            bool isRole)
         {
-            if (overwrite.IsRole)
-                await AddNewRoleOverwrite(guild, channel, allow, deny, overwrite);
+            var dspGuild = await Client.GetGuildAsync(guildId);
+            var dspChannel = await Client.GetChannelAsync(channelId);
+
+            if (isRole)
+                await AddNewRoleOverwrite(overwriteId, dspGuild, dspChannel);
             else
-                await AddNewMemberOverwrite(guild, channel, allow, deny, overwrite);
+                await AddNewMemberOverwrite(overwriteId, dspGuild, dspChannel);
         }
 
         private static async Task AddNewMemberOverwrite(
+            ulong overwriteId,
             DSharpPlus.Entities.DiscordGuild guild,
-            DSharpPlus.Entities.DiscordChannel channel,
-            DSharpPlus.Permissions allow,
-            DSharpPlus.Permissions deny,
-            DiscordOverwrite overwrite)
+            DSharpPlus.Entities.DiscordChannel channel)
         {
-
-            var member = await guild.GetMemberAsync(overwrite.Id);
-            await channel.AddOverwriteAsync(member, allow, deny);
+            var member = await guild.GetMemberAsync(overwriteId);
+            await channel.AddOverwriteAsync(member);
         }
 
         private static async Task AddNewRoleOverwrite(
+            ulong overwriteId,
             DSharpPlus.Entities.DiscordGuild guild,
-            DSharpPlus.Entities.DiscordChannel channel,
-            DSharpPlus.Permissions allow,
-            DSharpPlus.Permissions deny,
-            DiscordOverwrite overwrite)
+            DSharpPlus.Entities.DiscordChannel channel)
         {
-            var role = guild.GetRole(overwrite.Id);
-            await channel.AddOverwriteAsync(role, allow, deny);
+            var role = guild.GetRole(overwriteId);
+            await channel.AddOverwriteAsync(role);
         }
 
-        private static async Task UpdateExistingOverwrite(
-            DSharpPlus.Entities.DiscordOverwrite overwrite,
-            DSharpPlus.Permissions allow,
-            DSharpPlus.Permissions deny)
+        public static async Task DeleteExistingOverwrite(
+            ulong channelId,
+            ulong overwriteId)
         {
-            await overwrite.UpdateAsync(allow, deny);
-        }
-
-        private static async Task DeleteExistingOverwrite(
-            DSharpPlus.Entities.DiscordOverwrite overwrite)
-        {
-            await overwrite.DeleteAsync();
+            var dspChannel = await Client.GetChannelAsync(channelId);
+            var dspOverwrite = dspChannel.PermissionOverwrites.FirstOrDefault(o => o.Id == overwriteId);
+            await dspOverwrite.DeleteAsync();
         }
 
         private static Task GuildDownloadCompleted(

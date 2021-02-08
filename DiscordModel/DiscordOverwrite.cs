@@ -47,5 +47,24 @@ namespace DiscordModel
                 Permission.Add(DiscordPermission.PrioritySpeaker, null);
             }
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is not DiscordOverwrite overwrite)
+                return false;
+
+            if (this.Id != overwrite.Id ||
+                this.IsRole != overwrite.IsRole)
+                return false;
+
+            if (this.Permission.Count != overwrite.Permission.Count)
+                return false;
+
+            foreach (var p in this.Permission)
+                if (overwrite.Permission?[p.Key] != p.Value)
+                    return false;
+
+            return true;
+        }
     }
 }
