@@ -18,7 +18,7 @@
             <Label Margin="10" Height="25" Width="75">Overwrite:</Label>
             <ComboBox Name="OverwriteNamesBox" Width="250" VerticalAlignment="Center" IsEnabled="False" ItemsSource="{Binding OverwriteNames, NotifyOnSourceUpdated=True}" SelectionChanged="OverwriteNamesBox_SelectionChanged" />
         </StackPanel>
-        <Grid DockPanel.Dock="Top">
+        <Grid DockPanel.Dock="Top" SnapsToDevicePixels="True">
             <Grid.RowDefinitions>
                 <RowDefinition Height="30"/>
                 <RowDefinition Height="50"/>
@@ -140,7 +140,7 @@
             </Label>
         </Grid>
         <ScrollViewer>
-            <Grid Name="OverwriteGrid">
+            <Grid Name="OverwriteGrid" SnapsToDevicePixels="True">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2.5*" />
                     <ColumnDefinition Width="0.5*" />
